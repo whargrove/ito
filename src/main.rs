@@ -45,15 +45,14 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-struct ItoError(anyhow::Error);
+struct ItoError {
+    err: anyhow::Error,
+    sc: StatusCode,
+}
 
 impl IntoResponse for ItoError {
     fn into_response(self) -> Response {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Something went wrong: {}", self.0),
-        )
-            .into_response()
+        (self.sc, format!("Error: {}", self.err)).into_response()
     }
 }
 
@@ -62,7 +61,10 @@ where
     E: Into<anyhow::Error>,
 {
     fn from(err: E) -> Self {
-        Self(err.into())
+        Self {
+            err: err.into(),
+            sc: StatusCode::INTERNAL_SERVER_ERROR,
+        }
     }
 }
 
@@ -132,7 +134,8 @@ async fn create_link(
     conn.execute(
         "INSERT INTO links (alias, target_url) VALUES (?1, ?2)",
         params![input.alias, input.target_url],
-    )?;
+    )
+    .map_err(handle_sqlite_err)?;
     return Ok(Redirect::to("/"));
 }
 
@@ -150,12 +153,37 @@ async fn redirect_to_target(
     Path(link_alias): Path<String>,
 ) -> Result<impl IntoResponse, ItoError> {
     let conn = pool.get()?;
-    let target_url: Url = conn.query_row_and_then(
-        "SELECT target_url FROM links WHERE alias = ?",
-        [link_alias],
-        |row| row.get(0),
-    )?;
+    let target_url: Url = conn
+        .query_row_and_then(
+            "SELECT target_url FROM links WHERE alias = ?",
+            [link_alias],
+            |row| row.get(0),
+        )
+        .map_err(handle_sqlite_err)?;
     Ok(Redirect::to(&target_url.to_string()))
+}
+
+fn handle_sqlite_err(err: rusqlite::Error) -> ItoError {
+    match err {
+        rusqlite::Error::SqliteFailure(inner_err, _) => {
+            let sc = match inner_err.code {
+                rusqlite::ErrorCode::ConstraintViolation => StatusCode::BAD_REQUEST,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            ItoError {
+                err: err.into(),
+                sc,
+            }
+        }
+        rusqlite::Error::QueryReturnedNoRows => ItoError {
+            err: err.into(),
+            sc: StatusCode::NOT_FOUND,
+        },
+        _ => ItoError {
+            err: err.into(),
+            sc: StatusCode::INTERNAL_SERVER_ERROR,
+        },
+    }
 }
 
 async fn favicon() -> StatusCode {
