@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<head>
+    <link rel="icon" href="data:,">
+</head>
+
+<body>
+    <h1>ito</h1>
+    <form action="/links" method="post">
+        <label for="alias">
+            Alias:
+            <input type="text" name="alias" />
+        </label>
+        <label for="target_url">
+            Destination URL:
+            <input type="text" name="target_url" />
+        </label>
+        <input type="submit" value="Create" />
+    </form>
+    {% if links.len() == 0 %}
+    <p>No links created yet!</p>
+    {% else %}
+    <ul>
+        {% for link in links %}
+        <li id="{{link.id}}">Alias: {{link.alias}}, Url: {{link.target_url}}
+            <form onsubmit="deleteLink(event)">
+                <input type="hidden" name="id", value="{{link.id}}" />
+                <input type="submit" value="Delete" />
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <script lang="javascript">
+        deleteLink = function(e) {
+            e.preventDefault();
+            var id = e.target['id'].value;
+            fetch("/links/" + id, { method: 'DELETE' })
+                .then(() => {
+                    window.location.replace("/");
+                });
+        };
+    </script>
+</body>
+
+</html>
