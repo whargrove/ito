@@ -22,13 +22,13 @@ async fn main() -> Result<()> {
     let pool = r2d2::Pool::new(manager)?;
     pool.get()?.execute_batch(
         "BEGIN;
-            CREATE TABLE IF NOT EXISTS links (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                alias TEXT NOT NULL,
-                target_url TEXT NOT NULL
-            );
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_links_alias ON links (alias);
-            COMMIT;",
+        CREATE TABLE IF NOT EXISTS links (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            alias TEXT NOT NULL,
+            target_url TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_links_alias ON links (alias);
+        COMMIT;",
     )?;
 
     let app = Router::new()
