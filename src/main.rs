@@ -39,8 +39,7 @@ async fn main() -> Result<()> {
         .route("/links/:id", delete(delete_link))
         .with_state(pool);
 
-    // todo get socket addr from config
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     Server::bind(&addr).serve(app.into_make_service()).await?;
     Ok(())
 }
