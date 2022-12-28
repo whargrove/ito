@@ -18,7 +18,7 @@ use url::Url;
 #[tokio::main]
 async fn main() -> Result<()> {
     // todo path to db from config
-    let manager = SqliteConnectionManager::file("ito.db");
+    let manager = SqliteConnectionManager::file("./data/ito.db");
     let pool = r2d2::Pool::new(manager)?;
     pool.get()?.execute_batch(
         "BEGIN;
